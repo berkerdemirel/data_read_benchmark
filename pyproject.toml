@@ -1,0 +1,16 @@
+[project]
+name = "data-read-benchmark"
+version = "0.1.0"
+description = "A project to benchmark data reading performance for different file formats in PyTorch."
+authors = [{ name = "Your Name", email = "your@email.com" }]
+dependencies = [
+    "hydra-core",
+    "pytorch-lightning",
+    "torch",
+    "torchvision",
+    "wandb",
+    "pandas",
+    "pyarrow",
+    "numpy",
+    "scikit-learn",
+]
