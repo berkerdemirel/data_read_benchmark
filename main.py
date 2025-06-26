@@ -93,6 +93,7 @@ def main(cfg: DictConfig) -> None:
                             metadata_csv=f"{cfg.data.root_dir}/train_metadata.csv",
                             data_format=data_format,
                             transform=transform,
+                            image_size=tuple(cfg.data.image_size)
                         )
 
                     # Create the dataloader

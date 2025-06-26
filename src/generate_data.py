@@ -107,45 +107,48 @@ def do_generate_data(cfg: DictConfig) -> None:
 
     # Generate Parquet format in batches
     if "parquet" in cfg.data.formats:
-        log.info("Generating Parquet files in batches...")
+        log.info("Generating Parquet files in batches…")
         format_dir: str = os.path.join(cfg.data.root_dir, "parquet")
         os.makedirs(format_dir, exist_ok=True)
 
-        batch_size = cfg.data.parquet_batch_size
-        for i in tqdm(
-            range(0, num_samples, batch_size), desc="Generating Parquet batches"
-        ):
-            batch_start = i
-            batch_end = min(i + batch_size, num_samples)
+        BATCH = cfg.data.parquet_batch_size          # e.g. 4_096
+        C, H, W = image_size                         # channels, height, width
 
-            batch_images = images[batch_start:batch_end]
-            batch_labels = labels[batch_start:batch_end]
+        for i in tqdm(range(0, num_samples, BATCH), desc="Parquet batches"):
+            batch_images = images[i : i + BATCH]         # (B,C,H,W)
+            batch_labels = labels[i : i + BATCH]         # (B,)
+            file_idx     = i // BATCH
+            file_path    = os.path.join(format_dir, f"batch_{file_idx:04d}.parquet")
 
-            batch_df_data = [
-                {
-                    "image": img.flatten().tolist(),
-                    "channels": image_size[0],
-                    "height": image_size[1],
-                    "width": image_size[2],
-                }
-                for img in batch_images
-            ]
+            # ---- build Arrow table ------------------------------------------------
+            # 1) one binary blob per image (fastest for row-level reads)
+            blobs  = [img.tobytes() for img in batch_images]          # zero copy later
+            table  = pa.Table.from_arrays(
+                [
+                    pa.array(blobs, pa.binary()),                     # image column
+                    pa.array(batch_labels.astype(np.int16)),          # label column
+                ],
+                names=["image", "label"],
+            )
 
-            df = pd.DataFrame(batch_df_data)
+            # 2) write once, 4 096-row row-groups, light (zstd-1) compression
+            pq.write_table(
+                table,
+                file_path,
+                row_group_size=4096,          # ≈128 MB per row-group
+                compression="zstd",
+                compression_level=1,
+            )
+            # -----------------------------------------------------------------------
 
-            batch_num = i // batch_size
-            file_path = os.path.join(format_dir, f"batch_{batch_num}.parquet")
-
-            table = pa.Table.from_pandas(df)
-            pq.write_table(table, file_path)
-
+            # update metadata — row index *inside the file* is just offset in batch
             for k in range(len(batch_images)):
                 metadata.append(
                     {
                         "file_path": file_path,
-                        "label": int(batch_labels[k]),
-                        "format": "parquet",
-                        "index_in_batch": k,
+                        "label":    int(batch_labels[k]),
+                        "format":   "parquet",
+                        "index_in_batch": k,          # 0 … BATCH-1
                     }
                 )
 
