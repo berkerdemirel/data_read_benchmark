@@ -76,10 +76,11 @@ The `config.yaml` file allows you to configure the benchmark parameters:
 
 ## Dependencies
 
-- [PyTorch](https.pytorch.org)
-- [PyTorch Lightning](https://pytorchlightning.ai)
+- [PyTorch](https://pytorch.org)
+- [PyTorch Lightning](https://www.pytorchlightning.ai)
 - [Hydra](https://hydra.cc)
 - [Weights & Biases](https://wandb.ai)
 - [NumPy](https://numpy.org)
 - [Pandas](https://pandas.pydata.org)
 - [PyArrow](https://arrow.apache.org/docs/python)
+- [Scikit-learn](https://scikit-learn.org)
